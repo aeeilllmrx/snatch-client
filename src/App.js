@@ -202,11 +202,11 @@ class App extends React.Component {
     }
 
     const rows = [];
-    for (var i = 0; i < 10; i++){
+    for (var i = 0; i < 7; i++){
       let row = []
-      for (var j = 0; j < 10; j++){
+      for (var j = 0; j < 7; j++){
         let cellID = `cell${i}-${j}`;
-        let index = 10 * i + j;
+        let index = 7 * i + j;
         let letter = ''
         if (letters[index]) {
           letter = letters[index];

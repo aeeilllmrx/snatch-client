@@ -1,0 +1,4 @@
+[[redirects]]
+  from = "/get_wordlist"
+  to = "https://fathomless-badlands-00348.herokuapp.com"
+  status = 200
