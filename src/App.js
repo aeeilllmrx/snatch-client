@@ -1,70 +1,91 @@
-import React from "react";
-import { Alert } from 'react-bootstrap';
-
-import stemmer from 'stemmer';
-
-import Board from "./components/board/board"
-import Player from "./components/player/player"
-import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./helpers"
-
 import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useEffect, useState } from "react";
+import { Alert } from 'react-bootstrap';
+import stemmer from 'stemmer';
 import './App.css';
+import Board from "./components/board/board";
+import Player from "./components/player/player";
+import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./helpers";
+
+const io = require('socket.io-client');
+const socket = io('http://localhost:5000');
 
 
-class App extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      tiles: {}, // map from letter to the squares it appears on
-      squares: {}, // map from each square to the letter it contains
-      p1words: [],
-      p2words: [],
-      p1score: 0,
-      p2score: 0,
-      bag: generateLetters(),
-      rows: [],
-      dict: []
-    };
+function App() {
+  const [tiles, setTiles] = useState({});
+  const [squares, setSquares] = useState({});
+  const [p1words, setP1words] = useState([]);
+  const [p2words, setP2words] = useState([]);
+  const [p1score, setP1score] = useState(0);
+  const [p2score, setP2score] = useState(0);
+  const [rows, setRows] = useState([]);
+  const [dict, setDict] = useState([]);
+  const bag = generateLetters();
 
-    this.flip = this.flip.bind(this);
-    this.isValid = this.isValid.bind(this);
-    this.isValidCombination = this.isValidCombination.bind(this);
-    this.removeTiles = this.removeTiles.bind(this);
-    this.setBoard = this.setBoard.bind(this);
-    this.snatch = this.snatch.bind(this);
-  }
-
-  componentDidMount() {
-    // Call our fetch function below once the component mounts
-    this.callBackendAPI()
-      .then(res => this.setState({ dict: new Set(res.data) }))
-      .catch(err => console.log(err));
-  }
-
-  // Fetches our GET route from the Express server.
-  // Note the route we are fetching matches the GET route from server.js
-  callBackendAPI = async () => {
-    const response = await fetch('/get_wordlist');
-    const body = await response.json();
-
-    if (response.status !== 200) {
-      throw Error(body.message)
+  // only set dict on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch('/get_wordlist');
+      const body = await response.json();
+      if (response.status !== 200) {
+        throw Error(body.message)
+      }
+      return body
     }
-    return body;
-  };
 
-  isValid(word) {
+    fetchData()
+      .then(res => setDict(new Set(res.data)))
+      .catch(err => console.log(err));
+  }, []);
+
+  const updateOnFlip = ((data) => {
+    const tiles = data['tiles'];
+    const squares = data['squares'];
+    const rows = data['rows'];
+    setTiles(tiles);
+    setSquares(squares);
+    setRows(rows);
+    console.log(Object.values(squares));
+  });
+
+  const updateOnSnatch = ((data) => {
+    const tiles = data['tiles'];
+    const squares = data['squares'];
+    const rows = data['rows'];
+    const p1words = data['p1words'];
+    const p2words = data['p2words'];
+    const p1score = data['p1score'];
+    const p2score = data['p2score'];
+    setTiles(tiles);
+    setSquares(squares);
+    setRows(rows);
+    setP1words(p1words);
+    setP2words(p2words);
+    setP1score(p1score);
+    setP2score(p2score);
+  });
+
+  // always update on flip and snatch
+  useEffect(() => {
+    socket.on("flip-receive", data => {
+      updateOnFlip(data);
+    })
+
+    socket.on("snatch-receive", data => {
+      updateOnSnatch(data);
+    });
+  }, []);
+
+  const isValid = ((word) => {
     const wordMap = makeCounter(word);
-    const tiles = this.state.tiles
     const letterMap = Object.fromEntries(
       Object.keys(tiles).map(k => [k, tiles[k].length])
     )
     return contains(wordMap, letterMap);
-  }
+  });
 
-  isValidCombination(word, list) {
+  const isValidCombination = ((word, list) => {
     const wordMap = makeCounter(word);
-    const tiles = this.state.tiles
     const letterMap = Object.fromEntries(
       Object.keys(tiles).map(k => [k, tiles[k].length])
     )
@@ -89,12 +110,9 @@ class App extends React.Component {
       }
     }
     return [false, false];
-  }
+  });
 
-  removeTiles(word) {
-    const squares = this.state.squares;
-    const tiles = this.state.tiles;
-
+  const removeTiles = ((word) => {
     const counter = makeCounter(word);
     for (let letter in counter) {
       const count = counter[letter];
@@ -103,91 +121,79 @@ class App extends React.Component {
         let square = tiles[letter].pop()
         delete squares[square];
       }
-      
-      if (tiles[letter].length === 0) {
-        delete tiles[letter];
-      }
     }
+  });
 
-    this.setState(state => ({
-      squares: squares,
-      tiles: tiles
-    }))
-
-    this.setBoard();
-  }
-
-  snatch(player, word) {
+  const snatch = ((player, word) => {
     if (word.length === 0) {
       return;
     }
-    if (!this.state.dict.has(word.toUpperCase())) {
+    if (!dict.has(word.toUpperCase())) {
       return;
     }
-
     word = word.toUpperCase();
-    const p1words = this.state.p1words;
-    const p2words = this.state.p2words;
 
     // create a map to state objects so we can generalize the logic
     const playerMap = {
-      'p1': { 
+      'p1': {
         'words': p1words,
-        'oppWords': p2words  
+        'oppWords': p2words
        },
-       'p2': { 
+       'p2': {
         'words': p2words,
-        'oppWords': p1words  
+        'oppWords': p1words
        }
     }
 
     // first, see if the word can be made from the board
-    if (this.isValid(word)) {
+    if (isValid(word)) {
       console.log("word is valid");
-      this.removeTiles(word);
-
+      removeTiles(word);
       playerMap[player]['words'].push(word);
     } else {
       // next, try to steal from opponent
-      let [ steal, leftoverMap ] = this.isValidCombination(word, playerMap[player]['oppWords']);
+      let [ steal, leftoverMap ] = isValidCombination(word, playerMap[player]['oppWords']);
       if (steal) {
         console.log("word is valid steal");
         let leftover = ''
         for (let [key, value] of Object.entries(leftoverMap)) {
           leftover = leftover.concat(key.repeat(value))
         }
-        this.removeTiles(leftover);
-        
+        removeTiles(leftover);
         playerMap[player]['words'].push(word)
         playerMap[player]['oppWords'].splice(playerMap[player]['oppWords'].indexOf(steal), 1);
       } else {
         // finally, try to add on to yourself
-        let [ addOn, leftoverMap ] = this.isValidCombination(word, playerMap[player]['words']);
+        let [ addOn, leftoverMap ] = isValidCombination(word, playerMap[player]['words']);
         if (addOn) {
           console.log("word is valid add-on");
           let leftover = ''
           for (let [key, value] of Object.entries(leftoverMap)) {
             leftover = leftover.concat(key.repeat(value))
           }
-          this.removeTiles(leftover);
-          
+          removeTiles(leftover);
           playerMap[player]['words'].splice(playerMap[player]['words'].indexOf(steal), 1);
           playerMap[player]['words'].push(word)
         }
       }
     }
 
-    this.setState(state => ({
-      p1words: p1words,
-      p2words: p2words
-    }));
+    const board = getBoard(squares);
+    const scores = getScores(p1words, p2words);
 
-    this.setScores();
-  }
+    socket.emit('snatch-send', {
+      'tiles': board['tiles'],
+      'squares': board['squares'],
+      'rows': board['rows'],
+      'p1words': p1words,
+      'p2words': p2words,
+      'p1score': scores['p1'],
+      'p2score': scores['p2']
+    });
+  });
 
-  setBoard() {
-    const letters = Object.values(this.state.squares).filter(l => l !== '');
-
+  const getBoard = ((sq) => {
+    const letters = Object.values(sq).filter(l => l !== '');
     const squares = {};
     const tiles = {};
 
@@ -205,35 +211,30 @@ class App extends React.Component {
     for (var i = 0; i < 7; i++){
       let row = []
       for (var j = 0; j < 7; j++){
-        let cellID = `cell${i}-${j}`;
         let index = 7 * i + j;
         let letter = ''
         if (letters[index]) {
           letter = letters[index];
         }
-        row.push(
-          <td key={cellID}> 
-            <div id="cell" >{letter}</div>
-          </td>
-        )
+        row.push(letter);
       }
-      rows.push(<tr key={i}>{row}</tr>)
+      rows.push(row);
     }
 
-    this.setState(state => ({
-      squares: squares,
-      tiles: tiles,
-      rows: rows
-    }))
-  }
+    return {
+      'tiles': tiles,
+      'squares': squares,
+      'rows': rows
+    }
+  });
 
-  setScores() {
-    const playerMap = {'p1': this.state.p1words, 'p2': this.state.p2words }
+  const getScores = ((p1w, p2w) => {
+    const playerMap = {'p1': p1w, 'p2': p2w }
     const newScores = {};
 
     for (let [player, words] of Object.entries(playerMap)) {
       const wordLengths = words.map(word => word.length);
-    
+
       let score = 0;
       for (let wordLength of wordLengths) {
         score += (wordLength - 3);
@@ -242,20 +243,13 @@ class App extends React.Component {
       newScores[player] = score;
     }
 
-    this.setState(state => ({
-      p1score: newScores['p1'],
-      p2score: newScores['p2']
-    }))
+    return newScores;
+  });
 
-  }
-
-  flip() {
-    const bag = this.state.bag;
-    const tiles = this.state.tiles;
-    const squares = this.state.squares;
+  const flip = (() => {
     if (bag.length > 0) {
-      const letter = this.state.bag.pop()
-      const index = getLowestEmptyKey(this.state.squares, 100);
+      const letter = bag.pop()
+      const index = getLowestEmptyKey(squares, 100);
       if (letter in tiles) {
         tiles[letter].push(index);
       } else {
@@ -263,77 +257,82 @@ class App extends React.Component {
       }
 
       squares[index] = letter;
-      this.setState(state => ({
-        tiles: tiles,
-        squares: squares
-      }))
+
+      const board = getBoard(squares);
+
+      socket.emit('flip-send', {
+        'tiles': board['tiles'],
+        'squares': board['squares'],
+        'rows': board['rows']
+      });
     }
+  });
 
-    this.setBoard();
-  }
-        
-  render() {
-    return (
-      <div className="container-fluid">
-        <div className="row">
-          <div className="col" align="center">
-            <h3>Player 1</h3>
-            <span> Words </span>
-            <ul>
-              {this.state.p1words.map((word, index) =>
-                <li key={index}>{word}</li>
-              )}
-            </ul>
-            <Player
-              name='p1'
-              snatch={this.snatch.bind(this)}
-              setBoard={this.setBoard.bind(this)}
-            />
+
+  return (
+    <div className="container-fluid">
+      <div className="row">
+        <div className="col" align="center">
+          <h3>Player 1</h3>
+          <span> Words </span>
+          <ul>
+            {p1words.map((word, index) =>
+              <li key={index}>{word}</li>
+            )}
+          </ul>
+          <Player
+            name='p1'
+            snatch={snatch}
+          />
+        </div>
+
+        <div className="col-5" align="center">
+          <h3>Tiles</h3>
+          <Board
+            flip={flip}
+          />
+          <Alert
+            variant="warning" show={bag.length === 0}>No more tiles!
+          </Alert>
+
+          <div className="board">
+            <table className="table table-bordered table-striped">
+              <tbody>
+                {rows.map((row, i) =>
+                  <tr key={i}>
+                    {row.map((letter, j) =>
+                      <td key={j}>
+                        <div id="cell" >{letter}</div>
+                      </td>)}
+                  </tr>)}
+              </tbody>
+            </table>
           </div>
 
-          <div className="col-5" align="center">
-            <h3>Tiles</h3>
-            <Board
-              flip={this.flip.bind(this)}
-            />
-            <Alert 
-              variant="warning" show={this.state.bag.length === 0}>No more tiles!
-            </Alert>
-
-            <div className="board">
-              <table className="table table-bordered table-striped">
-                <tbody>
-                  {this.state.rows}
-                </tbody>
-              </table>
-            </div> 
-
-            <div>
-              Player 1 score: {this.state.p1score}
-            </div>
-            <div>
-              Player 2 score: {this.state.p2score}
-            </div>
+          <div>
+            Player 1 score: {p1score}
           </div>
-          
-          <div className="col" align="center">
-            <h3>Player 2</h3>
-            <span> Words </span>
-            <ul>
-              {this.state.p2words.map((word, index) =>
-                <li key={index}>{word}</li>
-              )}
-            </ul>
-            <Player
-              name='p2'
-              snatch={this.snatch.bind(this)}
-              setBoard={this.setBoard.bind(this)}
-            />
+          <div>
+            Player 2 score: {p2score}
           </div>
         </div>
+
+        <div className="col" align="center">
+          <h3>Player 2</h3>
+          <span> Words </span>
+          <ul>
+            {p2words.map((word, index) =>
+              <li key={index}>{word}</li>
+            )}
+          </ul>
+          <Player
+            name='p2'
+            snatch={snatch}
+          />
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 export default App;

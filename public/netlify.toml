@@ -1,4 +1,8 @@
 [[redirects]]
+  from = "/"
+  to = "https://fathomless-badlands-00348.herokuapp.com"
+  status = 200
+
   from = "/get_wordlist"
   to = "https://fathomless-badlands-00348.herokuapp.com/get_wordlist"
   status = 200
