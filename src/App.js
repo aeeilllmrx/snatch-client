@@ -1,6 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useEffect, useState } from "react";
-import { Alert } from 'react-bootstrap';
+import { Alert, Button } from 'react-bootstrap';
 import stemmer from 'stemmer';
 import './App.css';
 import Board from "./components/board/board";
@@ -14,15 +14,15 @@ const socket = io('http://localhost:5000');
 function App() {
   const [tiles, setTiles] = useState({});
   const [squares, setSquares] = useState({});
+  const [rows, setRows] = useState([]);
   const [p1words, setP1words] = useState([]);
   const [p2words, setP2words] = useState([]);
   const [p1score, setP1score] = useState(0);
   const [p2score, setP2score] = useState(0);
-  const [rows, setRows] = useState([]);
   const [dict, setDict] = useState([]);
-  const bag = generateLetters();
+  const [bag, setBag] = useState(generateLetters());
 
-  // only set dict on mount
+  // set dict on mount
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch('/get_wordlist');
@@ -38,42 +38,66 @@ function App() {
       .catch(err => console.log(err));
   }, []);
 
+  // when a user connects to an existing game, show the latest data
+  const updateOnConnect = ((board, words, scores) => {
+    setTiles(board['tiles']);
+    setSquares(board['squares']);
+    setRows(board['rows']);
+
+    setP1words(words['p1']);
+    setP2words(words['p2']);
+
+    setP1score(scores['p1']);
+    setP2score(scores['p2']);
+  });
+
   const updateOnFlip = ((data) => {
-    const tiles = data['tiles'];
-    const squares = data['squares'];
-    const rows = data['rows'];
-    setTiles(tiles);
-    setSquares(squares);
-    setRows(rows);
-    console.log(Object.values(squares));
+    setTiles(data['tiles']);
+    setSquares(data['squares']);
+    setRows(data['rows']);
   });
 
   const updateOnSnatch = ((data) => {
-    const tiles = data['tiles'];
-    const squares = data['squares'];
-    const rows = data['rows'];
-    const p1words = data['p1words'];
-    const p2words = data['p2words'];
-    const p1score = data['p1score'];
-    const p2score = data['p2score'];
-    setTiles(tiles);
-    setSquares(squares);
-    setRows(rows);
-    setP1words(p1words);
-    setP2words(p2words);
-    setP1score(p1score);
-    setP2score(p2score);
+    setTiles(data['tiles']);
+    setSquares(data['squares']);
+    setRows(data['rows']);
+    setP1words(data['p1words']);
+    setP2words(data['p2words']);
+    setP1score(data['p1score']);
+    setP2score(data['p2score']);
   });
 
-  // always update on flip and snatch
+  const updateOnReset = (() => {
+    setTiles({});
+    setSquares({});
+    setRows([]);
+    setP1words([]);
+    setP2words([]);
+    setP1score(0);
+    setP2score(0);
+    setBag(generateLetters());
+  });
+
+  // always update on flip, snatch, and new client
   useEffect(() => {
+    socket.on("client-connect-receive", data => {
+      const board = getBoard(data['squares']);
+      const words = {'p1': data['p1words'], 'p2': data['p2words']}
+      const scores = getScores(data['p1words'], data['p2words']);
+      updateOnConnect(board, words, scores);
+    })
+
     socket.on("flip-receive", data => {
       updateOnFlip(data);
     })
 
     socket.on("snatch-receive", data => {
       updateOnSnatch(data);
-    });
+    })
+
+    socket.on("reset-receive", () => {
+      updateOnReset();
+    })
   }, []);
 
   const isValid = ((word) => {
@@ -240,7 +264,6 @@ function App() {
       for (let wordLength of wordLengths) {
         score += (wordLength - 3);
       }
-
       newScores[player] = score;
     }
 
@@ -249,7 +272,8 @@ function App() {
 
   const flip = (() => {
     if (bag.length > 0) {
-      const letter = bag.pop()
+      const letter = bag.pop();
+      setBag(bag);
       const index = getLowestEmptyKey(squares, 100);
       if (letter in tiles) {
         tiles[letter].push(index);
@@ -267,6 +291,10 @@ function App() {
         'rows': board['rows']
       });
     }
+  });
+
+  const reset = (() => {
+    socket.emit('reset-send', {});
   });
 
 
@@ -315,6 +343,12 @@ function App() {
           </div>
           <div>
             Player 2 score: {p2score}
+          </div>
+
+          <div id="new-game">
+            <Button variant="outline-dark" onClick={reset}>
+              new game?
+            </Button>
           </div>
         </div>
 
