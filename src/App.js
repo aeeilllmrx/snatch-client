@@ -125,12 +125,13 @@ function App() {
   });
 
   const snatch = ((player, word) => {
-    if (word.length === 0) {
+    if (word.length < 3) {
       return;
     }
     if (!dict.has(word.toUpperCase())) {
       return;
     }
+
     word = word.toUpperCase();
 
     // create a map to state objects so we can generalize the logic
