@@ -8,7 +8,7 @@ import Player from "./components/player/player";
 import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./helpers";
 
 const io = require('socket.io-client');
-const socket = io('/');
+const socket = io('http://localhost:5000');
 
 
 function App() {
