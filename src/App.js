@@ -10,7 +10,6 @@ import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./hel
 const io = require('socket.io-client');
 const socket = io('/');
 
-
 function App() {
   const [tiles, setTiles] = useState({});
   const [squares, setSquares] = useState({});
@@ -19,7 +18,7 @@ function App() {
   const [p2words, setP2words] = useState([]);
   const [p1score, setP1score] = useState(0);
   const [p2score, setP2score] = useState(0);
-  const [dict, setDict] = useState([]);
+  const [dict, setDict] = useState(new Set());
   const [bag, setBag] = useState(generateLetters());
 
   // set dict on mount
@@ -82,8 +81,10 @@ function App() {
   useEffect(() => {
     socket.on("client-connect-receive", data => {
       const board = getBoard(data['squares']);
-      const words = {'p1': data['p1words'], 'p2': data['p2words']}
-      const scores = getScores(data['p1words'], data['p2words']);
+      const p1words = (data['p1words'] !== null ? data['p1words'] : [])
+      const p2words = (data['p2words'] !== null ? data['p2words'] : [])
+      const words = {'p1': p1words, 'p2': p2words}
+      const scores = getScores(p1words, p2words);
       updateOnConnect(board, words, scores);
     })
 
