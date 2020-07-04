@@ -8,7 +8,7 @@ import Player from "./components/player/player";
 import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./helpers";
 
 const io = require('socket.io-client');
-const socket = io('http://fathomless-badlands-00348.herokuapp.com');
+const socket = io('https://fathomless-badlands-00348.herokuapp.com');
 
 function App() {
   const [tiles, setTiles] = useState({});
