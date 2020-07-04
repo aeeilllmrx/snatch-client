@@ -8,7 +8,7 @@ import Player from "./components/player/player";
 import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./helpers";
 
 const io = require('socket.io-client');
-const socket = io();
+const socket = io('http://fathomless-badlands-00348.herokuapp.com:80');
 
 
 function App() {
