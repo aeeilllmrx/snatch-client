@@ -9,6 +9,7 @@ import { contains, generateLetters, getLowestEmptyKey, makeCounter } from "./hel
 
 const io = require('socket.io-client');
 const socket = io('https://fathomless-badlands-00348.herokuapp.com');
+//const socket = io('http://localhost:5000');
 
 function App() {
   const [tiles, setTiles] = useState({});
@@ -192,12 +193,12 @@ function App() {
 
     // finally, try to add on to yourself
     if (wordCreated !== true) {
-      let [add, leftover] = isValidCombination(word, playerMap[player]['oppWords']);
+      let [add, leftover] = isValidCombination(word, playerMap[player]['words']);
       if (add) {
         console.log("word is valid add-on");
         removeTiles(leftover);
         playerMap[player]['words'].splice(playerMap[player]['words'].indexOf(add), 1);
-        playerMap[player]['oppWords'].push(word);
+        playerMap[player]['words'].push(word);
         wordCreated = true;
       }
     }
