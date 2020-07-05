@@ -101,6 +101,7 @@ function App() {
     })
   }, []);
 
+  // can the word be snatched from the board
   const isValid = ((word) => {
     const wordMap = makeCounter(word);
     const letterMap = Object.fromEntries(
@@ -110,27 +111,28 @@ function App() {
   });
 
   const isValidCombination = ((word, list) => {
+    // return a list of tuples (candidate, leftover) where candidate
+    // is the word to be stolen, and leftover is the remaining letters
     const wordMap = makeCounter(word);
-    const letterMap = Object.fromEntries(
-      Object.keys(tiles).map(k => [k, tiles[k].length])
-    )
     const stem = stemmer(word);
 
     for (let candidate of list) {
       let candStem = stemmer(candidate);
-      if (stem === candStem) {
-        return [false, false];
-      }
       let candidateMap = makeCounter(candidate);
-      let remainder = {}
+      if ((stem === candStem) || (!contains(candidateMap, wordMap))) {
+        continue;
+      }
+
+      let remainder = ''
       for (let key in wordMap) {
         let count = (key in candidateMap ?
           wordMap[key] - candidateMap[key] : wordMap[key]);
         if (count > 0) {
-          remainder[key] = count;
+          remainder = remainder.concat(key.repeat(count))
         }
       }
-      if (contains(remainder, letterMap)) {
+
+      if (isValid(remainder)) {
         return [candidate, remainder];
       }
     }
@@ -150,13 +152,9 @@ function App() {
   });
 
   const snatch = ((player, word) => {
-    if (word.length < 3) {
+    if ((word.length < 3) || (!dict.has(word.toUpperCase()))) {
       return;
     }
-    if (!dict.has(word.toUpperCase())) {
-      return;
-    }
-
     word = word.toUpperCase();
 
     // create a map to state objects so we can generalize the logic
@@ -172,35 +170,35 @@ function App() {
     }
 
     // first, see if the word can be made from the board
+    let wordCreated = false;
     if (isValid(word)) {
       console.log("word is valid");
       removeTiles(word);
       playerMap[player]['words'].push(word);
-    } else {
-      // next, try to steal from opponent
-      let [ steal, leftoverMap ] = isValidCombination(word, playerMap[player]['oppWords']);
+      wordCreated = true;
+    }
+
+    // next, try to steal from opponent
+    if (wordCreated !== true) {
+      let [steal, leftover] = isValidCombination(word, playerMap[player]['oppWords']);
       if (steal) {
         console.log("word is valid steal");
-        let leftover = ''
-        for (let [key, value] of Object.entries(leftoverMap)) {
-          leftover = leftover.concat(key.repeat(value))
-        }
         removeTiles(leftover);
         playerMap[player]['words'].push(word)
         playerMap[player]['oppWords'].splice(playerMap[player]['oppWords'].indexOf(steal), 1);
-      } else {
-        // finally, try to add on to yourself
-        let [ addOn, leftoverMap ] = isValidCombination(word, playerMap[player]['words']);
-        if (addOn) {
-          console.log("word is valid add-on");
-          let leftover = ''
-          for (let [key, value] of Object.entries(leftoverMap)) {
-            leftover = leftover.concat(key.repeat(value))
-          }
-          removeTiles(leftover);
-          playerMap[player]['words'].splice(playerMap[player]['words'].indexOf(steal), 1);
-          playerMap[player]['words'].push(word)
-        }
+        wordCreated = true;
+      }
+    }
+
+    // finally, try to add on to yourself
+    if (wordCreated !== true) {
+      let [add, leftover] = isValidCombination(word, playerMap[player]['oppWords']);
+      if (add) {
+        console.log("word is valid add-on");
+        removeTiles(leftover);
+        playerMap[player]['words'].splice(playerMap[player]['words'].indexOf(add), 1);
+        playerMap[player]['oppWords'].push(word);
+        wordCreated = true;
       }
     }
 
