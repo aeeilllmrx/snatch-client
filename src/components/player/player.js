@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { Button, Form } from 'react-bootstrap';
+
 
 const Player = ({ name, snatch }) => {
   const [word, setWord] = useState('');
@@ -11,16 +13,14 @@ const Player = ({ name, snatch }) => {
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
-        <label>
-          <input 
-            type="text" 
-            value={word} 
-            onChange={e => setWord(e.target.value)}
-          />
-        </label>
-        <input type="submit" value="Snatch" />
-      </form>
+      <Form onSubmit={handleSubmit}>
+        <Form.Control 
+          type="text" 
+          value={word} 
+          onChange={e => setWord(e.target.value)}
+        />
+        <Button variant="secondary" type="submit">Snatch</Button>
+      </Form>
     </div>
   );
 }
