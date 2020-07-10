@@ -1,25 +1,33 @@
 .play-div {
   width: 100%;
-  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 100px;
+  margin-top: 50px;
 }
 
 .join-div {
   height: 100px;
-  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .settings {
-  height: 200px;
-  font-size: 20px;
+  height: 100px;
   display: flex;
   align-items: center;
   text-align: center;
   justify-content: center;
+}
+
+ul {
+  list-style: disc;
+  list-style-position: inside;
+}
+
+.instructions {
+  margin-top: 50px;
+  font-size: 15px;
+  text-align: center;
 }

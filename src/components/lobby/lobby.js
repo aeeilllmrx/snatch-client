@@ -50,6 +50,38 @@ const Lobby = () => {
           </FormControl>
         </div>
       </div>
+
+      <div className="instructions">
+        <div style={{ fontSize: 20 }}>
+            Herein lies a simple implementation of <a href="https://en.wikipedia.org/wiki/Anagrams">Snatch</a>.
+            The rules are as follows:
+        </div>
+        <br></br>
+        <div style={{ display: "inline-block", textAlign: "left"}}>
+          <ul>
+            <li>
+              Flip over tiles on the board. If you are able to form a word,
+              enter it and it becomes yours.
+            </li>
+            <li>
+              Words can also be formed by "snatching" opponents' words.
+              To do this, anagram a word and combine it with one or more board letters.
+            </li>
+            <li>
+              For example, if your opponent has the word "CAT", and there's an "L"
+              on the board, you can snatch it by entering "CART" or "TALC".
+            </li>
+            <li>
+              Similarly, you can snatch your own words.
+            </li>
+            <li>
+              Play continues until all tiles have run out. Scores are calculated
+              by summing up, for each word, length(word) - 3. Don't ask me why,
+              that's just how it's done.
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
