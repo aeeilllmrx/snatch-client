@@ -119,6 +119,9 @@ export function getScores(p1w, p2w) {
 
 /* Check if a word can be formed from a set of tiles. */
 export function isValid(word, tiles) {
+  if (!word) {
+    return false
+  }
   const wordMap = makeCounter(word);
   const letterMap = Object.fromEntries(
     Object.keys(tiles).map(k => [k, tiles[k].length])
