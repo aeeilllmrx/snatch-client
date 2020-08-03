@@ -1,7 +1,7 @@
 import React from 'react';
-import {Button} from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 
-const Board = ({ flip }) => {
+export const Board = ({ flip }) => {
   return (
     <div>
       <Button variant="outline-primary" onClick={flip}>
@@ -9,6 +9,4 @@ const Board = ({ flip }) => {
       </Button>
     </div>
   );
-}
-
-export default Board;
+};
