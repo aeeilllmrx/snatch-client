@@ -23,5 +23,17 @@
     "build": "react-scripts build",
     "format": "prettier --write \"src/**/*.(js|jsx)\""
   },
-  "proxy": "http://fathomless-badlands-00348.herokuapp.com"
+  "proxy": "http://fathomless-badlands-00348.herokuapp.com",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }
